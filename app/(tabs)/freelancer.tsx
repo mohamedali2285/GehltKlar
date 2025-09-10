@@ -30,6 +30,14 @@ export default function FreelancerCalculator() {
     healthInsurance,
   });
 
+  // Helper to format currency for breakdown items, ensuring it handles undefined/NaN
+  const formatCurrency = (value: number | undefined | null) => {
+    if (value === undefined || value === null || isNaN(value)) {
+      return '€ 0,00'; // Default to zero if value is invalid
+    }
+    return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -152,19 +160,13 @@ export default function FreelancerCalculator() {
           <View style={styles.resultRow}>
             <Text style={styles.resultLabel}>Monatlich:</Text>
             <Text style={styles.resultValue}>
-              {result.monthlyNet.toLocaleString('de-DE', {
-                style: 'currency',
-                currency: 'EUR',
-              })}
+              {formatCurrency(result.monthlyNet)}
             </Text>
           </View>
           <View style={styles.resultRow}>
             <Text style={styles.resultLabel}>Jährlich:</Text>
             <Text style={styles.resultValue}>
-              {result.yearlyNet.toLocaleString('de-DE', {
-                style: 'currency',
-                currency: 'EUR',
-              })}
+              {formatCurrency(result.yearlyNet)}
             </Text>
           </View>
           </View>
@@ -174,28 +176,20 @@ export default function FreelancerCalculator() {
           <View style={styles.breakdownRow}>
             <Text style={styles.breakdownLabel}>Einkommensteuer:</Text>
             <Text style={styles.breakdownValue}>
-              {result.breakdown.einkommensteuer.toLocaleString('de-DE', {
-                style: 'currency',
-                currency: 'EUR',
-              })}
+              {/* Safely format the value, providing a default if it's undefined or NaN */}
+              {formatCurrency(result.breakdown?.einkommensteuer)}
             </Text>
           </View>
           <View style={styles.breakdownRow}>
             <Text style={styles.breakdownLabel}>Solidaritätszuschlag:</Text>
             <Text style={styles.breakdownValue}>
-              {result.breakdown.solidaritaetszuschlag.toLocaleString('de-DE', {
-                style: 'currency',
-                currency: 'EUR',
-              })}
+              {formatCurrency(result.breakdown?.solidaritaetszuschlag)}
             </Text>
           </View>
           <View style={styles.breakdownRow}>
             <Text style={styles.breakdownLabel}>Krankenversicherung:</Text>
             <Text style={styles.breakdownValue}>
-              {healthInsurance.toLocaleString('de-DE', {
-                style: 'currency',
-                currency: 'EUR',
-              })}
+              {formatCurrency(healthInsurance)}
             </Text>
           </View>
         </View>

@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Calculator, Users } from 'lucide-react-native';
+import { Calculator, Users, Info } from 'lucide-react-native';
 import { StyleSheet } from 'react-native';
 
 export default function TabLayout() {
@@ -27,6 +27,15 @@ export default function TabLayout() {
           title: 'Freiberufler',
           tabBarIcon: ({ size, color }) => (
             <Calculator size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="about" // New tab for About screen
+        options={{
+          title: 'Über uns',
+          tabBarIcon: ({ size, color }) => (
+            <Info size={size} color={color} />
           ),
         }}
       />

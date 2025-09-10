@@ -38,7 +38,6 @@ interface EmployeeResult {
     arbeitslosenversicherung: number;
     krankenversicherung: number;
     pflegeversicherung: number;
-    pflegeversicherung: number;
   };
 }
 
@@ -366,8 +365,9 @@ export function calculateFreelancerNet(params: FreelancerParams): FreelancerResu
     monthlyNet: Math.max(0, netIncomeMonthly),
     yearlyNet: Math.max(0, netIncomeYearly),
     breakdown: {
+      // Ensure all keys are present, even if the calculated tax is 0
       einkommensteuer: taxResult.incomeTax,
-      solidaritaetszuschlag: taxResult.solidaritaetszuschlag,
+      solidaritaetszuschlag: taxResult.solidaritySurcharge,
       kirchensteuer: taxResult.churchTax,
     },
   };
