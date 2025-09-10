@@ -38,6 +38,7 @@ interface EmployeeResult {
     arbeitslosenversicherung: number;
     krankenversicherung: number;
     pflegeversicherung: number;
+    pflegeversicherung: number;
   };
 }
 
@@ -85,9 +86,9 @@ function getPensionUnemploymentCeiling(federalState: string): number {
 }
 
 // Official 2025 German progressive income tax calculation
-function calculateIncomeTax2025(taxableIncome: number, taxClass: string, churchTaxRate: number, paysChurchTax: boolean, isMarried: boolean, kinderFreibetragTotal: number): { incomeTax: number; solidaritySurcharge: number; churchTax: number } {
+function calculateIncomeTax2025(taxableIncome: number, taxClass: string, churchTaxRate: number, paysChurchTax: boolean, isMarried: boolean, steuerfreibetrag: number, kinderFreibetragTotal: number): { incomeTax: number; solidaritySurcharge: number; churchTax: number } {
   console.log('--- calculateIncomeTax2025 ---');
-  console.log('Inputs:', { taxableIncome, taxClass, churchTaxRate, paysChurchTax, isMarried, kinderFreibetragTotal });
+  console.log('Inputs:', { taxableIncome, taxClass, churchTaxRate, paysChurchTax, isMarried, steuerfreibetrag, kinderFreibetragTotal });
 
   let incomeTax = 0;
   let solidaritySurcharge = 0;
@@ -95,6 +96,7 @@ function calculateIncomeTax2025(taxableIncome: number, taxClass: string, churchT
 
   // Determine the correct basic tax-free allowance
   const basicAllowance = isMarried ? BASIC_TAX_FREE_ALLOWANCE_MARRIED : BASIC_TAX_FREE_ALLOWANCE_SINGLE;
+  console.log('Basic Allowance:', basicAllowance);
 
   // Apply Kinderfreibetrag and additional steuerfreibetrag to reduce taxable income
   // The Kinderfreibetrag is applied to reduce the taxable income.
@@ -186,17 +188,17 @@ export function calculateEmployeeNet(params: EmployeeParams): EmployeeResult {
   // Pension and Unemployment Insurance
   if (rentenversicherung === 'gesetzlich') {
     const pensionContributionBase = Math.min(yearlyGross, pensionUnemploymentCeiling);
-    employeePensionContribution = pensionContributionBase * PENSION_INSURANCE_RATE / 2;
+    employeePensionContribution = pensionContributionBase * PENSION_INSURANCE_RATE / 2 / 12; // Monthly
   }
   if (arbeitslosenversicherung === 'gesetzlich') {
     const unemploymentContributionBase = Math.min(yearlyGross, pensionUnemploymentCeiling);
-    employeeUnemploymentContribution = unemploymentContributionBase * UNEMPLOYMENT_INSURANCE_RATE / 2;
+    employeeUnemploymentContribution = unemploymentContributionBase * UNEMPLOYMENT_INSURANCE_RATE / 2 / 12; // Monthly
   }
 
   // Health and Care Insurance
   if (krankenversicherung === 'gesetzlich') {
     const healthInsuranceBase = Math.min(yearlyGross, healthInsuranceCeiling); // Use yearly gross for base calculation
-    employeeHealthContribution = healthInsuranceBase * (HEALTH_INSURANCE_GENERAL_RATE + kvZusatzbeitrag / 100) / 2;
+    employeeHealthContribution = healthInsuranceBase * (HEALTH_INSURANCE_GENERAL_RATE + kvZusatzbeitrag / 100) / 2 / 12; // Monthly
 
     // Care Insurance Calculation (Pflegeversicherung)
     let careInsuranceRateEmployee = CARE_INSURANCE_RATE_BASE / 2; // Employee's base share
@@ -241,13 +243,13 @@ export function calculateEmployeeNet(params: EmployeeParams): EmployeeResult {
         careInsuranceRateEmployee += CARE_INSURANCE_SURCHARGE_CHILDLESS_OVER_23;
       }
     }
-    employeeCareContribution = healthInsuranceBase * careInsuranceRateEmployee;
+    employeeCareContribution = healthInsuranceBase * careInsuranceRateEmployee / 12; // Monthly
   }
 
   // --- Taxable Income Calculation ---
   // Base for tax calculation is yearly gross + geldwerter Vorteil.
   // The Grundfreibetrag, additional steuerfreibetrag, and Kinderfreibetrag are applied within calculateIncomeTax2025.
-  const taxableIncomeForTaxCalc = yearlyGross + geldwerterVorteil;
+  const taxableIncomeForTaxCalc = yearlyGross + geldwerterVorteil * 12;
 
   // --- Tax Calculation ---
   const churchTaxRate = FEDERAL_STATE_CHURCH_TAX_RATES[bundesland] || 0;
@@ -274,6 +276,7 @@ export function calculateEmployeeNet(params: EmployeeParams): EmployeeResult {
     churchTaxRate,
     kirchensteuer,
     isMarried, // Pass married status
+    steuerfreibetrag, // <<< FIX: Pass steuerfreibetrag here
     totalKinderFreibetragToApply // Pass the total Kinderfreibetrag
   );
 
@@ -349,6 +352,7 @@ export function calculateFreelancerNet(params: FreelancerParams): FreelancerResu
     churchTaxRate,
     paysChurchTax,
     false, // Freelancers are generally not considered 'married' for this tax calculation context
+    0, // steuerfreibetrag for freelancers in this simplified model
     0 // No Kinderfreibetrag applied directly in this simplified freelancer tax calc
   );
 
@@ -363,7 +367,7 @@ export function calculateFreelancerNet(params: FreelancerParams): FreelancerResu
     yearlyNet: Math.max(0, netIncomeYearly),
     breakdown: {
       einkommensteuer: taxResult.incomeTax,
-      solidaritaetszuschlag: taxResult.solidaritySurcharge,
+      solidaritaetszuschlag: taxResult.solidaritaetszuschlag,
       kirchensteuer: taxResult.churchTax,
     },
   };
