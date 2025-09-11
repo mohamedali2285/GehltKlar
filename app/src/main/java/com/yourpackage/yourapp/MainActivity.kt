@@ -1,139 +1,202 @@
 package com.yourpackage.yourapp
 
-    import android.os.Bundle
-    import android.widget.Button
-    import android.widget.FrameLayout
-    import androidx.activity.ComponentActivity
-    import androidx.activity.compose.setContent
-    import androidx.compose.foundation.layout.Box
-    import androidx.compose.foundation.layout.fillMaxSize
-    import androidx.compose.foundation.layout.fillMaxWidth
-    import androidx.compose.foundation.layout.height
-    import androidx.compose.foundation.layout.padding
-    import androidx.compose.material3.MaterialTheme
-    import androidx.compose.material3.Surface
-    import androidx.compose.material3.Text
-    import androidx.compose.runtime.Composable
-    import androidx.compose.ui.Alignment
-    import androidx.compose.ui.Modifier
-    import androidx.compose.ui.platform.LocalContext
-    import androidx.compose.ui.tooling.preview.Preview
-    import androidx.compose.ui.unit.dp
-    import androidx.compose.ui.viewinterop.AndroidView
-    import com.google.android.gms.ads.AdRequest
-    import com.google.android.gms.ads.AdSize
-    import com.google.android.gms.ads.AdView
-    import com.google.android.gms.ads.FullScreenContentCallback
-    import com.google.android.gms.ads.LoadAdError
-    import com.google.android.gms.ads.interstitial.InterstitialAd
-    import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
-    import com.yourpackage.yourapp.ui.theme.YourAppTheme
-    import android.util.Log
+import android.os.Bundle
+import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.google.android.gms.ads.*
+import com.google.android.gms.ads.interstitial.InterstitialAd
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
+import com.yourpackage.yourapp.ui.theme.YourAppTheme
 
-    class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity() {
+    private val TAG = "MainActivity"
+    private var interstitialAd: InterstitialAd? = null
 
-        private lateinit var interstitialAdManager: InterstitialAdManager
-
-        override fun onCreate(savedInstanceState: Bundle?) {
-            super.onCreate(savedInstanceState)
-            setContent {
-                YourAppTheme {
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background
-                    ) {
-                        MainScreen()
-                    }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Load interstitial ad
+        loadInterstitialAd()
+        
+        setContent {
+            YourAppTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    MainScreen(
+                        onShowInterstitialClick = { showInterstitialAd() }
+                    )
                 }
             }
-
-            interstitialAdManager = InterstitialAdManager(this)
-            interstitialAdManager.loadAd("YOUR_INTERSTITIAL_AD_UNIT_ID") // Replace with your ad unit ID
         }
+    }
 
-        @Composable
-        fun MainScreen() {
-            Box(modifier = Modifier.fillMaxSize()) {
+    @Composable
+    fun MainScreen(onShowInterstitialClick: () -> Unit) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Main content
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
                 Text(
                     text = "Hello, AdMob!",
-                    modifier = Modifier.align(Alignment.Center)
+                    style = MaterialTheme.typography.headlineMedium
                 )
-                BannerAd(adUnitId = "YOUR_BANNER_AD_UNIT_ID") // Replace with your ad unit ID
+                
+                Spacer(modifier = Modifier.height(32.dp))
+                
                 Button(
-                    onClick = { interstitialAdManager.showAd() },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 60.dp)
+                    onClick = onShowInterstitialClick,
+                    modifier = Modifier.padding(16.dp)
                 ) {
                     Text("Show Interstitial Ad")
                 }
             }
-        }
-
-        @Composable
-        fun BannerAd(adUnitId: String) {
-            val context = LocalContext.current
-            AndroidView(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp) // Adjust height as needed
-                    .align(Alignment.BottomCenter),
-                factory = { context ->
-                    AdView(context).apply {
-                        adUnitId = adUnitId
-                        setAdSize(AdSize.BANNER) // Or AdSize.LARGE_BANNER, etc.
-                        loadAd(AdRequest.Builder().build())
-                    }
-                }
+            
+            // Banner ad at the bottom
+            AdaptiveBannerAd(
+                adUnitId = "YOUR_BANNER_AD_UNIT_ID",
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
 
-    class InterstitialAdManager(private val context: Context) {
-        private var interstitialAd: InterstitialAd? = null
-        private val TAG = "InterstitialAdManager"
+    @Composable
+    fun AdaptiveBannerAd(
+        adUnitId: String,
+        modifier: Modifier = Modifier
+    ) {
+        val context = LocalContext.current
+        
+        AndroidView(
+            modifier = modifier,
+            factory = { context ->
+                AdView(context).apply {
+                    // Get adaptive banner size
+                    val display = (context as ComponentActivity).windowManager.defaultDisplay
+                    val outMetrics = android.util.DisplayMetrics()
+                    display.getMetrics(outMetrics)
+                    
+                    val density = outMetrics.density
+                    var adWidthPixels = outMetrics.widthPixels.toFloat()
+                    
+                    if (adWidthPixels == 0f) {
+                        adWidthPixels = outMetrics.widthPixels.toFloat()
+                    }
+                    
+                    val adWidth = (adWidthPixels / density).toInt()
+                    val adaptiveSize = AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, adWidth)
+                    
+                    setAdSize(adaptiveSize)
+                    this.adUnitId = adUnitId
+                    
+                    // Set ad listener for debugging
+                    adListener = object : AdListener() {
+                        override fun onAdClicked() {
+                            Log.d("BannerAd", "Ad was clicked.")
+                        }
+                        
+                        override fun onAdClosed() {
+                            Log.d("BannerAd", "Ad was closed.")
+                        }
+                        
+                        override fun onAdFailedToLoad(adError: LoadAdError) {
+                            Log.d("BannerAd", "Ad failed to load: ${adError.message}")
+                        }
+                        
+                        override fun onAdImpression() {
+                            Log.d("BannerAd", "Ad recorded an impression.")
+                        }
+                        
+                        override fun onAdLoaded() {
+                            Log.d("BannerAd", "Ad was loaded.")
+                        }
+                        
+                        override fun onAdOpened() {
+                            Log.d("BannerAd", "Ad was opened.")
+                        }
+                    }
+                    
+                    // Load the ad
+                    loadAd(AdRequest.Builder().build())
+                }
+            }
+        )
+    }
 
-        fun loadAd(adUnitId: String) {
-            val adRequest = AdRequest.Builder().build()
-            InterstitialAd.load(context, adUnitId, adRequest, object : InterstitialAdLoadCallback() {
+    private fun loadInterstitialAd() {
+        val adRequest = AdRequest.Builder().build()
+        
+        InterstitialAd.load(
+            this,
+            "YOUR_INTERSTITIAL_AD_UNIT_ID",
+            adRequest,
+            object : InterstitialAdLoadCallback() {
                 override fun onAdFailedToLoad(adError: LoadAdError) {
-                    Log.d(TAG, adError.toString())
+                    Log.d(TAG, "Interstitial ad failed to load: ${adError.message}")
                     interstitialAd = null
                 }
 
                 override fun onAdLoaded(ad: InterstitialAd) {
-                    Log.d(TAG, "onAdLoaded")
+                    Log.d(TAG, "Interstitial ad loaded successfully")
                     interstitialAd = ad
+                    
+                    // Set full screen content callback
                     interstitialAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
+                        override fun onAdClicked() {
+                            Log.d(TAG, "Interstitial ad was clicked.")
+                        }
+                        
                         override fun onAdDismissedFullScreenContent() {
-                            // Called when ad is dismissed.
+                            Log.d(TAG, "Interstitial ad was dismissed.")
                             interstitialAd = null
-                            Log.d(TAG, "Ad was dismissed.")
-                            // Optionally, load a new ad here
-                            loadAd(adUnitId)
+                            // Load a new ad for next time
+                            loadInterstitialAd()
                         }
 
-                        override fun onAdFailedToShowFullScreenContent(adError: com.google.android.gms.ads.AdError) {
-                            // Called when ad fails to show.
-                            Log.d(TAG, "Ad failed to show.")
+                        override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                            Log.d(TAG, "Interstitial ad failed to show: ${adError.message}")
                             interstitialAd = null
+                        }
+
+                        override fun onAdImpression() {
+                            Log.d(TAG, "Interstitial ad recorded an impression.")
                         }
 
                         override fun onAdShowedFullScreenContent() {
-                            // Called when ad is shown.
-                            Log.d(TAG, "Ad showed fullscreen content.")
+                            Log.d(TAG, "Interstitial ad showed fullscreen content.")
                         }
                     }
                 }
-            })
-        }
-
-        fun showAd() {
-            if (interstitialAd != null) {
-                interstitialAd?.show(context)
-            } else {
-                Log.d(TAG, "The interstitial ad wasn't ready yet.")
-                // Optionally, load a new ad here
             }
+        )
+    }
+
+    private fun showInterstitialAd() {
+        interstitialAd?.let { ad ->
+            ad.show(this)
+        } ?: run {
+            Log.d(TAG, "The interstitial ad wasn't ready yet.")
+            // Optionally load a new ad
+            loadInterstitialAd()
         }
     }
+}
