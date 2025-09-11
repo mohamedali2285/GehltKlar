@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,27 +7,59 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TrendingUp, Euro, Building, Info, CircleAlert as AlertCircle } from 'lucide-react-native';
+import { TrendingUp, Euro, Building, Info, CircleAlert as AlertCircle, X } from 'lucide-react-native';
 import { calculateFreelancerNet } from '@/utils/taxCalculations';
 
 const { width } = Dimensions.get('window');
+
+const BUNDESLAENDER = [
+  'Baden-Württemberg',
+  'Bayern',
+  'Berlin',
+  'Brandenburg',
+  'Bremen',
+  'Hamburg',
+  'Hessen',
+  'Mecklenburg-Vorpommern',
+  'Niedersachsen',
+  'Nordrhein-Westfalen',
+  'Rheinland-Pfalz',
+  'Saarland',
+  'Sachsen',
+  'Sachsen-Anhalt',
+  'Schleswig-Holstein',
+  'Thüringen',
+];
+
+const STEUERKLASSEN = ['1', '2', '3', '4', '5', '6'];
 
 export default function FreelancerCalculator() {
   const [jahresgewinn, setJahresgewinn] = useState('');
   const [krankenversicherung, setKrankenversicherung] = useState('');
   const [betriebsausgaben, setBetriebsausgaben] = useState('');
+  const [freelancerTaxClass, setFreelancerTaxClass] = useState('1'); // New state for tax class
+  const [freelancerPaysChurchTax, setFreelancerPaysChurchTax] = useState(false); // New state for church tax
+  const [freelancerFederalState, setFreelancerFederalState] = useState('Nordrhein-Westfalen'); // New state for federal state
+
+  const [isTaxClassModalVisible, setTaxClassModalVisible] = useState(false);
+  const [isFederalStateModalVisible, setFederalStateModalVisible] = useState(false);
 
   const annualProfit = parseFloat(jahresgewinn) || 0;
-  const healthInsurance = parseFloat(krankenversicherung) || 0;
+  const healthInsuranceCostYearly = parseFloat(krankenversicherung) || 0; // Renamed for clarity
   const businessExpenses = parseFloat(betriebsausgaben) || 0;
   
   const adjustedProfit = Math.max(0, annualProfit - businessExpenses);
 
   const result = calculateFreelancerNet({
     annualProfit: adjustedProfit,
-    healthInsurance,
+    healthInsuranceCostYearly: healthInsuranceCostYearly,
+    taxClass: freelancerTaxClass,
+    paysChurchTax: freelancerPaysChurchTax,
+    federalState: freelancerFederalState,
   });
 
   // Helper to format currency for breakdown items, ensuring it handles undefined/NaN
@@ -37,6 +69,31 @@ export default function FreelancerCalculator() {
     }
     return value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
   };
+
+  // Effect to recalculate when inputs change
+  useEffect(() => {
+    // Only perform calculation if annualProfit is not zero, or if other relevant inputs have values
+    if (annualProfit > 0 || healthInsuranceCostYearly > 0 || businessExpenses > 0) {
+      // The calculation is already done by `result` variable, which is derived from states.
+      // This useEffect primarily ensures the component re-renders when these states change.
+    } else {
+      // Optionally reset results if all inputs are cleared
+      // This is handled by the `result` variable automatically becoming zero if inputs are zero.
+    }
+  }, [
+    jahresgewinn,
+    krankenversicherung,
+    betriebsausgaben,
+    freelancerTaxClass,
+    freelancerPaysChurchTax,
+    freelancerFederalState,
+  ]);
+
+  const renderModalItem = (item: string, onPress: () => void) => (
+    <TouchableOpacity style={styles.modalItem} onPress={onPress}>
+      <Text style={styles.modalItemText}>{item}</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -146,6 +203,61 @@ export default function FreelancerCalculator() {
           )}
         </View>
 
+        <View style={styles.inputSection}>
+          <Text style={styles.sectionTitle}>📋 Steuerdaten</Text>
+          
+          <View style={styles.inputRow}>
+            {/* Steuerklasse Input */}
+            <View style={[styles.inputCard, styles.pickerCard, styles.steuerklasseCard]}>
+              <TouchableOpacity onPress={() => setTaxClassModalVisible(true)}>
+                <View style={styles.inputHeader}>
+                  <Text style={styles.inputTitle}>Steuerklasse</Text>
+                </View>
+                <View style={styles.pickerValueContainer}>
+                  <Text style={styles.pickerValue}>Klasse {freelancerTaxClass}</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+            
+            {/* In der Kirche Toggle */}
+            <View style={[styles.inputCard, styles.kirscheCard]}>
+              <View style={styles.inputHeader}>
+                <Text style={styles.inputTitle}>Kirchensteuer</Text>
+              </View>
+              <View style={styles.radioContainer}>
+                <TouchableOpacity
+                  style={styles.radioOption}
+                  onPress={() => setFreelancerPaysChurchTax(true)}>
+                  <View style={[styles.radioOuterCircle, freelancerPaysChurchTax && styles.radioOuterCircleActive]}>
+                    {freelancerPaysChurchTax && <View style={styles.radioInnerCircle} />}
+                  </View>
+                  <Text style={styles.radioLabel}>Ja</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.radioOption}
+                  onPress={() => setFreelancerPaysChurchTax(false)}>
+                  <View style={[styles.radioOuterCircle, !freelancerPaysChurchTax && styles.radioOuterCircleActive]}>
+                    {!freelancerPaysChurchTax && <View style={styles.radioInnerCircle} />}
+                  </View>
+                  <Text style={styles.radioLabel}>Nein</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          {/* Bundesland Modal Trigger */}
+          <View style={[styles.inputCard, styles.pickerCard]}>
+            <TouchableOpacity onPress={() => setFederalStateModalVisible(true)}>
+              <View style={styles.inputHeader}>
+                <Text style={styles.inputTitle}>Bundesland</Text>
+              </View>
+              <View style={styles.pickerValueContainer}>
+                <Text style={styles.pickerValue}>{freelancerFederalState}</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <View style={styles.resultSection}>
           <View style={styles.resultCard}>
           <Text style={styles.resultTitle}>Geschätztes Netto</Text>
@@ -189,7 +301,7 @@ export default function FreelancerCalculator() {
           <View style={styles.breakdownRow}>
             <Text style={styles.breakdownLabel}>Krankenversicherung:</Text>
             <Text style={styles.breakdownValue}>
-              {formatCurrency(healthInsurance)}
+              {formatCurrency(healthInsuranceCostYearly)}
             </Text>
           </View>
         </View>
@@ -216,6 +328,31 @@ export default function FreelancerCalculator() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Modals */}
+      <Modal animationType="slide" transparent={true} visible={isFederalStateModalVisible} onRequestClose={() => setFederalStateModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Wähle dein Bundesland</Text>
+              <TouchableOpacity onPress={() => setFederalStateModalVisible(false)}><X size={24} color="#757575" /></TouchableOpacity>
+            </View>
+            <FlatList data={BUNDESLAENDER} renderItem={({ item }) => renderModalItem(item, () => { setFreelancerFederalState(item); setFederalStateModalVisible(false); })} keyExtractor={(item) => item} style={styles.modalList} />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal animationType="slide" transparent={true} visible={isTaxClassModalVisible} onRequestClose={() => setTaxClassModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Wähle deine Steuerklasse</Text>
+              <TouchableOpacity onPress={() => setTaxClassModalVisible(false)}><X size={24} color="#757575" /></TouchableOpacity>
+            </View>
+            <FlatList data={STEUERKLASSEN} renderItem={({ item }) => renderModalItem(`Klasse ${item}`, () => { setFreelancerTaxClass(item); setTaxClassModalVisible(false); })} keyExtractor={(item) => item} style={styles.modalList} />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -276,6 +413,20 @@ const styles = StyleSheet.create({
     elevation: 4,
     borderWidth: 1,
     borderColor: '#F0F0F0',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start', // Align items to the top
+  },
+  steuerklasseCard: {
+    flex: 1,
+    minWidth: '45%',
+  },
+  kirscheCard: {
+    flex: 1,
+    minWidth: '45%',
+    justifyContent: 'center', // Center content vertically
   },
   inputHeader: {
     flexDirection: 'row',
@@ -467,5 +618,102 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666666',
     lineHeight: 20,
+  },
+  pickerCard: {
+    zIndex: 10,
+  },
+  pickerValueContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#E8EAED',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  pickerValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333333',
+  },
+  radioContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    marginTop: 8,
+  },
+  radioOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 20,
+  },
+  radioOuterCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#2E7D32',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  radioOuterCircleActive: {
+    borderColor: '#2E7D32',
+  },
+  radioInnerCircle: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#2E7D32',
+  },
+  radioLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333333',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    width: '90%',
+    maxHeight: '70%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333333',
+  },
+  modalList: {
+    flexGrow: 1,
+  },
+  modalItem: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: '#333333',
   },
 });
