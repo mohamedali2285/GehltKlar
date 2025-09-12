@@ -13,6 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TrendingUp, Euro, Building, Info, CircleAlert as AlertCircle, X } from 'lucide-react-native';
 import { calculateFreelancerNet } from '@/utils/taxCalculations';
+import AdBanner from '@/components/AdBanner';
+import { useInterstitialAd } from '@/components/InterstitialAdManager';
 
 const { width } = Dimensions.get('window');
 
@@ -38,6 +40,8 @@ const BUNDESLAENDER = [
 const STEUERKLASSEN = ['1', '2', '3', '4', '5', '6'];
 
 export default function FreelancerCalculator() {
+  const { showAd: showInterstitialAd, isLoaded: isInterstitialLoaded } = useInterstitialAd();
+
   const [jahresgewinn, setJahresgewinn] = useState('');
   const [krankenversicherung, setKrankenversicherung] = useState('');
   const [betriebsausgaben, setBetriebsausgaben] = useState('');
@@ -328,6 +332,9 @@ export default function FreelancerCalculator() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Banner Ad at the bottom */}
+      <AdBanner style={styles.bannerAd} />
 
       {/* Modals */}
       <Modal animationType="slide" transparent={true} visible={isFederalStateModalVisible} onRequestClose={() => setFederalStateModalVisible(false)}>
@@ -715,5 +722,10 @@ const styles = StyleSheet.create({
   modalItemText: {
     fontSize: 16,
     color: '#333333',
+  },
+  bannerAd: {
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
   },
 });

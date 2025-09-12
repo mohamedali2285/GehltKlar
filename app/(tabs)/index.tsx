@@ -15,6 +15,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Euro, Calculator, Info, X, Calendar, Minus, Plus } from 'lucide-react-native';
 import { calculateEmployeeNet } from '@/utils/taxCalculations';
+import AdBanner from '@/components/AdBanner';
+import { useInterstitialAd } from '@/components/InterstitialAdManager';
 
 const { width } = Dimensions.get('window');
 
@@ -48,6 +50,8 @@ const KINDERFREIBETRAG_OPTIONS = [
 ];
 
 export default function EmployeeCalculator() {
+  const { showAd: showInterstitialAd, isLoaded: isInterstitialLoaded } = useInterstitialAd();
+
   const [bruttogehalt, setBruttogehalt] = useState('');
   const [abrechnungszeitraum, setAbrechnungszeitraum] = useState<'Jahr' | 'Monat'>('Monat');
   const [geldwerterVorteil, setGeldwerterVorteil] = useState('');
@@ -613,6 +617,9 @@ export default function EmployeeCalculator() {
         </View>
       </ScrollView>
 
+      {/* Banner Ad at the bottom */}
+      <AdBanner style={styles.bannerAd} />
+
       {/* Modals */}
       <Modal animationType="slide" transparent={true} visible={isBundeslandModalVisible} onRequestClose={() => setBundeslandModalVisible(false)}>
         <View style={styles.modalOverlay}>
@@ -1048,5 +1055,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#333333',
+  },
+  bannerAd: {
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
   },
 });
