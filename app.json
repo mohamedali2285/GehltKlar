@@ -20,14 +20,7 @@
     "plugins": [
       "expo-router", 
       "expo-font", 
-      "expo-web-browser",
-      [
-        "react-native-google-mobile-ads",
-        {
-          "androidAppId": "YOUR_ANDROID_ADMOB_APP_ID",
-          "iosAppId": "YOUR_IOS_ADMOB_APP_ID"
-        }
-      ]
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
