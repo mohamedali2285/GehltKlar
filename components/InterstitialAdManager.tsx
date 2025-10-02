@@ -19,12 +19,12 @@ export function useInterstitialAd() {
   }, [interstitial]);
 
   useEffect(() => {
-    const loadInterstitialAd = async () => {
-      if (Platform.OS === 'web') {
-        setIsLoaded(true);
-        return;
-      }
+    if (Platform.OS === 'web') {
+      setIsLoaded(true);
+      return;
+    }
 
+    const loadInterstitialAd = async () => {
       try {
         const { InterstitialAd, AdEventType, TestIds } = await import('react-native-google-mobile-ads');
         const adUnitId = __DEV__ ? TestIds.INTERSTITIAL : Platform.select({
@@ -37,7 +37,7 @@ export function useInterstitialAd() {
         });
 
         await interstitialAd.load();
-        setInterstitial(interstitialAd); // Set the interstitial ad to the state
+        setInterstitial(interstitialAd);
         setIsLoaded(true);
       } catch (error) {
         console.log('AdMob not available:', error);
