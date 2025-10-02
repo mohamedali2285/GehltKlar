@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Calculator, Users, Info } from 'lucide-react-native';
+import { Calculator, Users, Info, BookOpen } from 'lucide-react-native';
 import { StyleSheet } from 'react-native';
 
 export default function TabLayout() {
@@ -31,7 +31,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="about" // New tab for About screen
+        name="admob-guide"
+        options={{
+          title: 'AdMob',
+          tabBarIcon: ({ size, color }) => (
+            <BookOpen size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="about"
         options={{
           title: 'Über uns',
           tabBarIcon: ({ size, color }) => (
