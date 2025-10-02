@@ -43,39 +43,7 @@ const styles = StyleSheet.create({
 });
 
 const AdMobBanner = ({ size, style }: AdBannerProps) => {
-  const [bannerAd, setBannerAd] = React.useState<any>(null);
-
-  React.useEffect(() => {
-    if (Platform.OS === 'web') {
-      return;
-    }
-
-    const loadBannerAd = async () => {
-      try {
-        const { BannerAd, BannerAdSize, TestIds } = await import('react-native-google-mobile-ads');
-        const adUnitId = __DEV__ ? TestIds.ADAPTIVE_BANNER : Platform.select({
-          ios: 'YOUR_IOS_BANNER_AD_UNIT_ID',
-          android: 'YOUR_ANDROID_BANNER_AD_UNIT_ID',
-        }) || TestIds.ADAPTIVE_BANNER;
-
-        const banner = new BannerAd(adUnitId, {
-          size: size || BannerAdSize.ADAPTIVE_BANNER,
-          requestOptions: {
-            requestNonPersonalizedAdsOnly: true,
-          },
-        });
-
-        await banner.load();
-        setBannerAd(banner);
-      } catch (error) {
-        console.log('AdMob banner not available:', error);
-      }
-    };
-
-    loadBannerAd();
-  }, [size]);
-
-  return bannerAd ? <BannerAdView bannerAd={bannerAd} style={style} /> : null;
+  return null;
 };
 
 const BannerAdView = ({ bannerAd, style }: { bannerAd: any; style: any }) => {
